@@ -10,6 +10,7 @@ from PyQt5 import QtGui, QtWidgets
 from os import listdir
 import pandas as pd
 
+
 data_total = []
 dfs = ['', '', '', '', '', '', '', '']
 total_columns = set()  # 获取列名并集
