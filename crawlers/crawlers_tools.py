@@ -657,6 +657,10 @@ def get_detail_url(target_index: int, mission_name: str, isbn: str, output_file_
                 output_file(output_file_name, mission_name)
                 gLock.release()
         elif mission_name == "Worldcat":
+            #   尝试点击接受cookie按钮
+            if DRIVERS_PAGES_TIMES[target_index] < 3:
+                # 等待点击协议的"接受cookie" 页面
+                browser_click(target_index, "//button[@id='onetrust-accept-btn-handler']", False, False)
             # 在"光盘"的输入框中输入isbn编号
             browser_input_keyword(target_index, "//input[@id='q1']", isbn, True, True)
             # 搜索是否存在书目
@@ -752,6 +756,8 @@ def get_detail_url(target_index: int, mission_name: str, isbn: str, output_file_
                 # 上锁,并在data_finding中删除编号 在data_found中添加编号
                 gLock.acquire()
                 print("√ 线程:{} 编号:{} ".format(target_index, isbn))
+                for k, v in data.items():
+                    print("    {}:  {}".format(k, v))
                 data_finding.remove(isbn)
                 data_total[isbn].update(data)
                 data_found.add(isbn)
@@ -2061,4 +2067,5 @@ def crawler_for_cd(input_file: str, output_file: str, thread_num: int, target_na
 
 
 if __name__ == '__main__':
-    crawler_for_cd("临时测试.txt", "测试书号_书籍_British.iso", 1, "British", False)
+    # crawler_for_cd("临时测试.txt", "测试书号_书籍_British.iso", 1, "British", False)
+    crawler_for_cd("测试数据_cd.csv", "测试书号_cd_Worldcat.csv", 2, "Worldcat", True)
