@@ -1031,6 +1031,9 @@ def get_detail_url(target_index: int, mission_name: str, isbn: str, output_file_
                 output_iso_from_data(output_file_name, isbn_total, data_total)
                 gLock.release()
         elif mission_name == "US":
+            # 第一次打开 等待重定向的五秒钟
+            if DRIVERS_PAGES_TIMES[target_index] == 1:
+                sleep(5)
             # 在输入框中输入isbn编号
             browser_input_keyword(target_index, "//input[@id='quick-search-argument']", isbn, True, True)
             # 搜索是否存在书目.
@@ -2067,5 +2070,5 @@ def crawler_for_cd(input_file: str, output_file: str, thread_num: int, target_na
 
 
 if __name__ == '__main__':
-    # crawler_for_cd("临时测试.txt", "测试书号_书籍_British.iso", 1, "British", False)
-    crawler_for_cd("测试数据_cd.csv", "测试书号_cd_Worldcat.csv", 1, "Worldcat", True)
+    crawler_for_cd("测试书号_书籍.txt", "测试书号_书籍_US.iso", 2, "US", False)
+    # crawler_for_cd("测试数据_cd.csv", "测试书号_cd_Worldcat.csv", 1, "Worldcat", True)
