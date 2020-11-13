@@ -4,6 +4,9 @@ from math import floor
 from crawlers import crawlers_tools
 from crawlers import pymarc_tools
 from crawlers import globalValues
+import global_vars as gl
+from time import sleep
+from threading import Thread
 
 TARGETS = ["无", "CD-亚马逊", "CD-迪斯科", "CD-荷兰", "CD-世界猫", "CD-谷歌", "韩文抓取", "CD-csv->iso", "韩文iso文件规范",
            "书-伯克利", "书-耶鲁", "书-英图", "书-密歇根", "书-美图", "iso空白统计", "书-五合一"]
@@ -212,81 +215,101 @@ class Window(QWidget):
 
     # "执行任务"按钮点击后执行的操作
     def button4_action(self):
-        edittext = self.findChild(QTextEdit, "内容区文字框")
-        edittext.setText("")
-        text = ''
-        if len(self.mission) > 0:
-            # 依序执行
-            for index, mission in enumerate(self.mission):
-                # 先根据类别弹出文件夹对话框or文件对话框
-                # csv文件部分
-                if mission in ["CD-亚马逊", "CD-迪斯科", "CD-荷兰", "CD-世界猫", "CD-谷歌", "CD-csv->iso"]:
-                    directory = QFileDialog.getOpenFileName(self, "请选取待转化的csv文件", "./", "*.csv")[0][:-4]
-                    if mission == "CD-亚马逊":
-                        crawlers_tools.crawler_for_cd(directory + ".csv", directory + "_亚马逊.csv", 2, "Amazon")
-                        edittext.setText("亚马逊抓取完成.")
-                    elif mission == "CD-迪斯科":
-                        crawlers_tools.crawler_for_cd(directory + ".csv", directory + "_迪斯科.csv", 2, "Disco")
-                        edittext.setText("迪斯科抓取完成.")
-                    elif mission == "CD-荷兰":
-                        crawlers_tools.crawler_for_cd(directory + ".csv", directory + "_荷兰.csv", 1,
-                                                      "Neitherlands")
-                        edittext.setText("荷兰抓取完成.")
-                    elif mission == "CD-世界猫":
-                        crawlers_tools.crawler_for_cd(directory + ".csv", directory + "_世界猫.csv", 2, "Worldcat")
-                        edittext.setText("世界猫抓取完成.")
-                    elif mission == "CD-谷歌":
-                        crawlers_tools.crawler_for_cd(directory + ".csv", directory + "_谷歌.csv", 2, "Google")
-                        edittext.setText("谷歌抓取完成.")
-                    elif mission == "CD-csv->iso":
-                        pymarc_tools.output_iso(directory + ".csv")
-                        edittext.setText("csv文件转换iso文件完成.")
-                # txt文件部分
-                elif mission in ["韩文抓取", "书-伯克利", "书-耶鲁", "书-英图", "书-密歇根", "书-美图"]:
-                    directory = QFileDialog.getOpenFileName(self, "请选取待转化的txt文件", "./", "*.txt")[0][:-4]
-                    if mission == "韩文抓取":
-                        crawlers_tools.crawler_for_cd(directory + ".txt", directory + "_韩文抓取.csv", 2, "South Korea",
-                                                      False)
-                        edittext.setText("韩文抓取完成.")
-                    elif mission == "书-伯克利":
-                        crawlers_tools.crawler_for_cd(directory + ".txt", directory + "_Berkeley.iso", 2, "Berkeley",
-                                                      False)
-                        edittext.setText("Berkeley抓取完成.")
-                    elif mission == "书-耶鲁":
-                        crawlers_tools.crawler_for_cd(directory + ".txt", directory + "_Yale.iso", 2, "Yale",
-                                                      False)
-                        edittext.setText("Yale抓取完成.")
-                    elif mission == "书-英图":
-                        crawlers_tools.crawler_for_cd(directory + ".txt", directory + "_British.iso", 2, "British",
-                                                      False)
-                        edittext.setText("British抓取完成.")
-                    elif mission == "书-密歇根":
-                        crawlers_tools.crawler_for_cd(directory + ".txt", directory + "_Michigan.iso", 2, "Michigan",
-                                                      False)
-                        edittext.setText("Michigan抓取完成.")
-                    elif mission == "书-美图":
-                        crawlers_tools.crawler_for_cd(directory + ".txt", directory + "_US.iso", 2, "US",
-                                                      False)
-                        edittext.setText("US抓取完成.")
-                # iso文件部分
-                elif mission in ["韩文iso文件规范"]:
-                    directory = QFileDialog.getOpenFileName(self, "请选取待转化的iso文件", "./", "*.iso")[0][:-4]
-                    if mission == "韩文iso文件规范":
-                        pymarc_tools.South_Korea_format(directory + ".iso", directory + "_软件生成.iso")
-                        edittext.setText("韩文iso文件规范完成.")
-                # 文件夹部分
-                elif mission in ["书-五合一"]:
-                    directory = QFileDialog.getExistingDirectory(self, "请选取待批量处理的文件夹", "./")
-                    if mission == "书-五合一":
-                        pymarc_tools.merge_five_isos(directory)
-                        edittext.setText("五合一完成.")
-                # iso文件+txt文件
-                elif mission in ["iso空白统计"]:
-                    directory1 = QFileDialog.getOpenFileName(self, "请选取待转化的iso文件(待转化iso)", "./", "*.iso")[0][:-4]
-                    directory2 = QFileDialog.getOpenFileName(self, "请选取待转化的txt文件(原始书号)", "./", "*.txt")[0][:-4]
-                    if mission == "iso空白统计":
-                        pymarc_tools.get_blanks_from_iso(directory1 + ".iso", directory2 + ".txt")
-                        edittext.setText("iso空白统计完成.")
+        self_ = self
+
+        # 线程1内容  主要爬虫工作
+        def main_action(self_):
+            if len(self_.mission) > 0:
+                # 依序执行
+                for index, mission in enumerate(self_.mission):
+                    # 先根据类别弹出文件夹对话框or文件对话框
+                    # csv文件部分
+                    if mission in ["CD-亚马逊", "CD-迪斯科", "CD-荷兰", "CD-世界猫", "CD-谷歌", "CD-csv->iso"]:
+                        directory = QFileDialog.getOpenFileName(self_, "请选取待转化的csv文件", "./", "*.csv")[0][:-4]
+                        if mission == "CD-亚马逊":
+                            crawlers_tools.crawler_for_cd(directory + ".csv", directory + "_亚马逊.csv", 2, "Amazon")
+                        elif mission == "CD-迪斯科":
+                            crawlers_tools.crawler_for_cd(directory + ".csv", directory + "_迪斯科.csv", 2, "Disco")
+                        elif mission == "CD-荷兰":
+                            crawlers_tools.crawler_for_cd(directory + ".csv", directory + "_荷兰.csv", 1,
+                                                          "Neitherlands")
+                        elif mission == "CD-世界猫":
+                            crawlers_tools.crawler_for_cd(directory + ".csv", directory + "_世界猫.csv", 2, "Worldcat")
+                        elif mission == "CD-谷歌":
+                            crawlers_tools.crawler_for_cd(directory + ".csv", directory + "_谷歌.csv", 2, "Google")
+                        elif mission == "CD-csv->iso":
+                            pymarc_tools.output_iso(directory + ".csv")
+                    # txt文件部分
+                    elif mission in ["韩文抓取", "书-伯克利", "书-耶鲁", "书-英图", "书-密歇根", "书-美图"]:
+                        directory = QFileDialog.getOpenFileName(self_, "请选取待转化的txt文件", "./", "*.txt")[0][:-4]
+                        if mission == "韩文抓取":
+                            crawlers_tools.crawler_for_cd(directory + ".txt", directory + "_韩文抓取.csv", 2, "South Korea",
+                                                          False)
+                        elif mission == "书-伯克利":
+                            crawlers_tools.crawler_for_cd(directory + ".txt", directory + "_Berkeley.iso", 2,
+                                                          "Berkeley",
+                                                          False)
+                        elif mission == "书-耶鲁":
+                            crawlers_tools.crawler_for_cd(directory + ".txt", directory + "_Yale.iso", 2, "Yale",
+                                                          False)
+                        elif mission == "书-英图":
+                            crawlers_tools.crawler_for_cd(directory + ".txt", directory + "_British.iso", 2, "British",
+                                                          False)
+                        elif mission == "书-密歇根":
+                            crawlers_tools.crawler_for_cd(directory + ".txt", directory + "_Michigan.iso", 2,
+                                                          "Michigan",
+                                                          False)
+                        elif mission == "书-美图":
+                            crawlers_tools.crawler_for_cd(directory + ".txt", directory + "_US.iso", 2, "US",
+                                                          False)
+                    # iso文件部分
+                    elif mission in ["韩文iso文件规范"]:
+                        directory = QFileDialog.getOpenFileName(self_, "请选取待转化的iso文件", "./", "*.iso")[0][:-4]
+                        if mission == "韩文iso文件规范":
+                            pymarc_tools.South_Korea_format(directory + ".iso", directory + "_软件生成.iso")
+                    # 文件夹部分
+                    elif mission in ["书-五合一"]:
+                        directory = QFileDialog.getExistingDirectory(self_, "请选取待批量处理的文件夹", "./")
+                        if mission == "书-五合一":
+                            pymarc_tools.merge_five_isos(directory)
+                    # iso文件+txt文件
+                    elif mission in ["iso空白统计"]:
+                        directory1 = QFileDialog.getOpenFileName(self_, "请选取待转化的iso文件(待转化iso)", "./", "*.iso")[0][:-4]
+                        directory2 = QFileDialog.getOpenFileName(self_, "请选取待转化的txt文件(原始书号)", "./", "*.txt")[0][:-4]
+                        if mission == "iso空白统计":
+                            pymarc_tools.get_blanks_from_iso(directory1 + ".iso", directory2 + ".txt")
+
+        # 线程2内容  显示提示字样
+        def text_prompt(self_):
+            print("线程2已接入")
+            # 初始化全局变量文字
+            gl._init()
+            gl.set_value("hint", [])
+
+            edittext = self_.findChild(QTextEdit, "内容区文字框")
+            hint = gl.get_value("hint")
+            while len(hint) == 0 or hint[-1] != "over!":
+                # 显示最后五行
+                words = ""
+                for hint_words in range(max(0, len(hint) - 5), len(hint)):
+                    words += hint_words + "\n"
+                print("当前文字是:{}".format(words))
+                edittext.setText(words)
+                # 刷新完毕 睡眠2秒
+                sleep(2)
+
+        main_action(self_)
+        # thread_list = []
+        # t1 = Thread(target=main_action, args=(self_,))
+        # thread_list.append(t1)
+        # t1.start()
+        #
+        # t2 = Thread(target=text_prompt, args=(self_,))
+        # thread_list.append(t2)
+        # t2.start()
+        #
+        # t1.join()
+        # t2.join()
 
 
 if __name__ == '__main__':

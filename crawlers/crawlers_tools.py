@@ -19,8 +19,8 @@ from selenium.common.exceptions import NoSuchElementException, TimeoutException,
 from time import sleep
 from lxml import etree
 from crawlers.pymarc_tools import output_iso_from_data
-from crawlers import globalValues
 import sys
+import global_vars as gl
 
 DRIVERS = []
 DRIVERS_PAGES_TIMES = []
@@ -109,6 +109,7 @@ def my_target(num: int, mission_name: str, output_file_name: str):
                 get_detail_url(target_index, mission_name, isbn, output_file_name)
             # 任务已完成.停止分配并退出浏览器.
             else:
+                # gl.set_value("hint", gl.get_value("hint").append("over!"))
                 gLock.release()
                 break
 
@@ -140,6 +141,9 @@ def get_detail_url(target_index: int, mission_name: str, isbn: str, output_file_
     print("当前检测中线程:{} 检测中编码:{} 剩余进度:{}/{} continue数值:{}".format(target_index, isbn,
                                                                 len(set(isbn_total) - (data_finding | data_found)),
                                                                 len(isbn_total), data_total[isbn]['continue']))
+    # gl.set_value("hint", gl.get_value("hint").append("当前检测中线程:{} 检测中编码:{} 剩余进度:{}/{} continue数值:{}".format(
+    #     target_index, isbn, len(set(isbn_total) - (data_finding | data_found)), len(isbn_total),
+    #     data_total[isbn]['continue'])))
     gLock.release()
     # 每次重启任务,需要从头开始首页面
     DRIVERS[target_index].execute_script("window.open('{}')".format(HOME_PAGE[mission_name]))
@@ -1038,8 +1042,7 @@ def get_detail_url(target_index: int, mission_name: str, isbn: str, output_file_
             browser_input_keyword(target_index, "//input[@id='quick-search-argument']", isbn, True, True)
             # 搜索是否存在书目.
             book_exist = browser_find_book(target_index, "//main[@class='content-wrapper']/article",
-                                           "//div[@class='search-results-list-description-item search"
-                                           "-results-list-description-title']/a")
+                                           "//li[@class='tab']/a")
             if not book_exist:
                 gLock.acquire()
                 data_single = data_total[isbn]
@@ -1052,7 +1055,7 @@ def get_detail_url(target_index: int, mission_name: str, isbn: str, output_file_
             else:
                 # 点击第一个标题
                 browser_click(target_index, "//div[@class='search-results-list-description-item search-results-"
-                                            "list-description-title']/a", True, True)
+                                            "list-description-title']/a", True, False)
                 # 点击下方"MARC Tags"按钮
                 browser_click(target_index, "//li[@class='tab']/a", True, True)
                 # 开始整理数据
@@ -1933,9 +1936,9 @@ def Yale_convert_data(target_index: int) -> dict:
                 value += v.strip()
         # 把数据填入字典中.先查重.
         if key in result:
-            for i in range(10):
-                if "{}({})".format(key, i) not in result:
-                    key = "{}({})".format(key, i)
+            for j in range(10):
+                if "{}({})".format(key, j) not in result:
+                    key = "{}({})".format(key, j)
                     break
         result[key] = value
     return result
@@ -1955,7 +1958,8 @@ def British_convert_data(target_index: int) -> dict:
     data_num = len(page_source.xpath("//table/tbody/tr/td[@id='bold']"))
     for i in range(data_num):
         key = page_source.xpath("//table/tbody/tr[{}]/td[@id='bold']/text()".format(i + 1))[0]
-        value = page_source.xpath("//table/tbody/tr[{}]/td[@class='td1'][2]/text()".format(i + 1))[0]
+        value = page_source.xpath("//table/tbody/tr[{}]/td[@class='td1'][2]/text()".format(i + 1))[0].replace(" ",
+                                                                                                              " ")
         if key[:3] == "LDR":
             key = '000'
         elif not '0' <= key[0] <= '9':
@@ -1978,6 +1982,11 @@ def British_convert_data(target_index: int) -> dict:
                     break
             if not again:
                 break
+        if key in result:
+            for j in range(10):
+                if "{}({})".format(key, j + 1) not in result:
+                    key = "{}({})".format(key, j + 1)
+                    break
         result[key] = value
     return result
 
@@ -2015,6 +2024,11 @@ def Michigan_convert_data(target_index: int) -> dict:
                     "//tbody/tr[{}]/td[4]/span[@class='marc__subfield']//text()".format(i + 1))
                 for words in values:
                     value += words.strip()
+        if key in result:
+            for j in range(10):
+                if "{}({})".format(key, j + 1) not in result:
+                    key = "{}({})".format(key, j + 1)
+                    break
         result[key] = value
     return result
 
@@ -2050,6 +2064,11 @@ def US_convert_data(target_index: int) -> dict:
                     "//ul[@id='marc-record']/li[{}]/span[@class='marc-field']//text()".format(i + 1))
                 for words in values:
                     value += words.strip()
+            if key in result:
+                for j in range(10):
+                    if "{}({})".format(key, j + 1) not in result:
+                        key = "{}({})".format(key, j + 1)
+                        break
         result[key] = value
     return result
 
@@ -2070,5 +2089,6 @@ def crawler_for_cd(input_file: str, output_file: str, thread_num: int, target_na
 
 
 if __name__ == '__main__':
-    crawler_for_cd("测试书号_书籍.txt", "测试书号_书籍_US.iso", 2, "US", False)
+    crawler_for_cd("朝图1-100.txt", "朝图_US.iso", 4, "US", False)
+    # crawler_for_cd("临时测试.txt", "临时测试_British.iso", 1, "British", False)
     # crawler_for_cd("测试数据_cd.csv", "测试书号_cd_Worldcat.csv", 1, "Worldcat", True)

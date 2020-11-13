@@ -95,6 +95,7 @@ def output_iso_from_data(file_name: str, isbn_total: list, data_total: dict) -> 
     temp_file_name = "临时文件.iso"
     fp = open(file_name, 'w', encoding='utf-8')
     fp.close()
+    records = []
     for isbn in isbn_total:
         record = Record()
         if isbn in data_total:
@@ -122,22 +123,38 @@ def output_iso_from_data(file_name: str, isbn_total: list, data_total: dict) -> 
         if str(record.leader) == str(Record().leader):  # 新的数据
             record.add_field(Field(tag='001', data=isbn))
         record = record_sorted(record)
+        records.append(record)
+
         # 数据生成完毕,写入临时文件
         with open(temp_file_name, 'wb') as fh:
             writer = MARCWriter(fh)
             try:
                 writer.write(record)
+                # 测试读取是否有问题(如大英9780714827308)
             except UnicodeEncodeError:
                 print("编号为:{}的数据格式有误,清空数据以利于输出.".format(isbn))
                 record = Record()
                 record.add_field(Field(tag='001', data=isbn))
                 writer.write(record)
+
         # 从临时文件录入到生成文件中
         fp1, fp2 = open(temp_file_name, 'r', encoding='utf-8'), open(file_name, 'a', encoding='utf-8')
-        fp2.write(fp1.readline())
+        try:
+            fp2.write(fp1.readline())
+        except UnicodeDecodeError:  # 部分解码有误 如大英9780714827308
+            fp1.close()
+            fp2.close()
+            with open(temp_file_name, 'wb') as fh:
+                writer = MARCWriter(fh)
+                record = Record()
+                record.add_field(Field(tag='001', data=isbn))
+                writer.write(record)
+            fp1, fp2 = open(temp_file_name, 'r', encoding='utf-8'), open(file_name, 'a', encoding='utf-8')
+            fp2.write(fp1.readline())
         fp2.write('\n')
         fp1.close()
         fp2.close()
+
     # 删除临时文件
     os.remove(temp_file_name)
 
