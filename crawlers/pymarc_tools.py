@@ -7,7 +7,7 @@
 """
 import pandas as pd
 from pymarc import MARCReader, Record, Field, MARCWriter
-from pymarc.exceptions import NoFieldsFound
+from pymarc.exceptions import NoFieldsFound, RecordLengthInvalid
 import os
 
 NON_CHARACTERS_IN_UTF_8 = ["©"]
@@ -286,7 +286,7 @@ def read_iso(file_name: str) -> list:
     temp_name = "临时.iso"
     # 读入数据
     fp = open(file_name, 'r', encoding='utf-8')
-    for data in fp:
+    for index, data in enumerate(fp):
         # 把当前这行数据写入临时文件
         # try:
         fp_temp = open(temp_name, 'w', encoding='utf-8')
@@ -299,6 +299,8 @@ def read_iso(file_name: str) -> list:
             record = next(reader)
         except (NoFieldsFound, UnicodeDecodeError):  # 如果未从网站爬下,存在使用无内容的数据占位的数据.仍用无内容的数据补位.
             record = Record()
+        except RecordLengthInvalid:  # 读取数据多了最后一行的回车符,则跳出
+            break
         finally:
             fh.close()
             result.append(record)
@@ -724,6 +726,41 @@ def South_Korea_format(input_file_name: str, output_file_name: str) -> None:
     output_iso_from_iso(output_file_name, data_total)
 
 
+"""
+@模块13:按照020中的"1-1000"字段顺序排序.
+"""
+
+
+def record_sorted_020(input_file_name: str, output_file_name: str) -> None:
+    # 先从指定位置读取数据
+    datas = read_iso(input_file_name)
+    results = {}
+    results_list = []
+    for index, data in enumerate(datas):
+        # 尝试获取020字段
+        subfields = data.get_fields('020')
+        for subfield in subfields:
+            key = subfield.get_subfields('a')
+            if len(key) > 0:
+                key = key[0]
+                if len(key) <= 3:
+                    if int(key) not in results:
+                        results[int(key)] = [data]
+                    else:
+                        results[int(key)].append(data)
+    # 从小到大排序
+    results_keys = results.keys()
+    sorted_results_keys = sorted(results_keys)
+    for key in sorted_results_keys:
+        for record in results[key]:
+            results_list.append(record)
+    # 输出
+    output_iso_from_iso(output_file_name, results_list)
+
+
 if __name__ == '__main__':
-    directory = "C:\\Users\\Administrator\\PycharmProjects\\GlobalBibliography\\crawlers"
-    merge_five_isos(directory)
+    # directory = "C:\\Users\\Administrator\\PycharmProjects\\GlobalBibliography\\crawlers"
+    # merge_five_isos(directory)
+    directory = "C:\\Users\\Administrator\\Desktop\\待排序数据201115.iso"
+    directory2 = "C:\\Users\\Administrator\\Desktop\\待排序数据201115_转化后.iso"
+    record_sorted_020(directory, directory2)

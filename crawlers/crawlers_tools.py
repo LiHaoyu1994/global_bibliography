@@ -109,7 +109,6 @@ def my_target(num: int, mission_name: str, output_file_name: str):
                 get_detail_url(target_index, mission_name, isbn, output_file_name)
             # 任务已完成.停止分配并退出浏览器.
             else:
-                # gl.set_value("hint", gl.get_value("hint").append("over!"))
                 gLock.release()
                 break
 
@@ -141,9 +140,6 @@ def get_detail_url(target_index: int, mission_name: str, isbn: str, output_file_
     print("当前检测中线程:{} 检测中编码:{} 剩余进度:{}/{} continue数值:{}".format(target_index, isbn,
                                                                 len(set(isbn_total) - (data_finding | data_found)),
                                                                 len(isbn_total), data_total[isbn]['continue']))
-    # gl.set_value("hint", gl.get_value("hint").append("当前检测中线程:{} 检测中编码:{} 剩余进度:{}/{} continue数值:{}".format(
-    #     target_index, isbn, len(set(isbn_total) - (data_finding | data_found)), len(isbn_total),
-    #     data_total[isbn]['continue'])))
     gLock.release()
     # 每次重启任务,需要从头开始首页面
     DRIVERS[target_index].execute_script("window.open('{}')".format(HOME_PAGE[mission_name]))
@@ -760,8 +756,6 @@ def get_detail_url(target_index: int, mission_name: str, isbn: str, output_file_
                 # 上锁,并在data_finding中删除编号 在data_found中添加编号
                 gLock.acquire()
                 print("√ 线程:{} 编号:{} ".format(target_index, isbn))
-                for k, v in data.items():
-                    print("    {}:  {}".format(k, v))
                 data_finding.remove(isbn)
                 data_total[isbn].update(data)
                 data_found.add(isbn)

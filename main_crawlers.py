@@ -9,7 +9,7 @@ from time import sleep
 from threading import Thread
 
 TARGETS = ["无", "CD-亚马逊", "CD-迪斯科", "CD-荷兰", "CD-世界猫", "CD-谷歌", "韩文抓取", "CD-csv->iso", "韩文iso文件规范",
-           "书-伯克利", "书-耶鲁", "书-英图", "书-密歇根", "书-美图", "iso空白统计", "书-五合一"]
+           "书-伯克利", "书-耶鲁", "书-英图", "书-密歇根", "书-美图", "iso空白统计", "书-五合一","按020字段排序"]
 
 
 class Window(QWidget):
@@ -263,10 +263,12 @@ class Window(QWidget):
                             crawlers_tools.crawler_for_cd(directory + ".txt", directory + "_US.iso", 2, "US",
                                                           False)
                     # iso文件部分
-                    elif mission in ["韩文iso文件规范"]:
+                    elif mission in ["韩文iso文件规范", "按020字段排序"]:
                         directory = QFileDialog.getOpenFileName(self_, "请选取待转化的iso文件", "./", "*.iso")[0][:-4]
                         if mission == "韩文iso文件规范":
                             pymarc_tools.South_Korea_format(directory + ".iso", directory + "_软件生成.iso")
+                        elif mission == "按020字段排序":
+                            pymarc_tools.record_sorted_020(directory + ".iso", directory + "_排序后.iso")
                     # 文件夹部分
                     elif mission in ["书-五合一"]:
                         directory = QFileDialog.getExistingDirectory(self_, "请选取待批量处理的文件夹", "./")
@@ -279,37 +281,7 @@ class Window(QWidget):
                         if mission == "iso空白统计":
                             pymarc_tools.get_blanks_from_iso(directory1 + ".iso", directory2 + ".txt")
 
-        # 线程2内容  显示提示字样
-        def text_prompt(self_):
-            print("线程2已接入")
-            # 初始化全局变量文字
-            gl._init()
-            gl.set_value("hint", [])
-
-            edittext = self_.findChild(QTextEdit, "内容区文字框")
-            hint = gl.get_value("hint")
-            while len(hint) == 0 or hint[-1] != "over!":
-                # 显示最后五行
-                words = ""
-                for hint_words in range(max(0, len(hint) - 5), len(hint)):
-                    words += hint_words + "\n"
-                print("当前文字是:{}".format(words))
-                edittext.setText(words)
-                # 刷新完毕 睡眠2秒
-                sleep(2)
-
         main_action(self_)
-        # thread_list = []
-        # t1 = Thread(target=main_action, args=(self_,))
-        # thread_list.append(t1)
-        # t1.start()
-        #
-        # t2 = Thread(target=text_prompt, args=(self_,))
-        # thread_list.append(t2)
-        # t2.start()
-        #
-        # t1.join()
-        # t2.join()
 
 
 if __name__ == '__main__':
